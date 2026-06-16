@@ -18,8 +18,8 @@ the `permission-slip` CLI:
   enforcement, and default-account selection all live in Permission Slip and its
   built-in `protonmail` connector.
 - The skill's only job is mapping natural language to the right CLI command
-  (`permission-slip request --action protonmail.<action> ...`) and presenting
-  the JSON result.
+  (`npx @permission-slip/cli@latest request --action protonmail.<action> ...`)
+  and presenting the JSON result.
 
 Reads (`read_inbox`, `search_emails`, `read_email`) are low-risk and typically
 auto-approve. Writes (`send_email`, `reply_email`, `archive_email`) are
@@ -29,8 +29,8 @@ it in Permission Slip before reporting success.
 ## Prerequisites
 
 - An OpenClaw machine configured as an agent for a Permission Slip server.
-- The `permission-slip` CLI installed and registered (`permission-slip whoami`
-  should succeed).
+- The `permission-slip` CLI available via `npx` and registered
+  (`npx @permission-slip/cli@latest whoami` should succeed).
 - A connected Proton Mail account in Permission Slip. See the
   [Proton Mail connector setup guide](https://github.com/supersuit-tech/permission-slip/blob/main/docs/connectors/protonmail.md).
 
