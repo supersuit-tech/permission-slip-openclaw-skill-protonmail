@@ -14,6 +14,20 @@ This skill contains no code of its own: it is a thin shim over the
 approval enforcement, and default-account selection live in Permission Slip and
 its built-in `protonmail` connector.
 
+## Invoking the CLI
+
+Always invoke the CLI through `npx`:
+
+```bash
+npx @permission-slip/cli@latest <command> [args...]
+```
+
+Do **not** call a bare `permission-slip` binary — it is not guaranteed to be on
+`PATH`, and assuming a path like `~/.openclaw/.../bin/permission-slip` will fail
+with "Command not found". `npx @permission-slip/cli@latest` always resolves the
+CLI (downloading/caching it on first use). Every command below — `whoami`,
+`connectors`, `request`, `request-status` — must use this `npx` form.
+
 ## Defaults
 
 - **"Check my email" → read the inbox, newest 50 messages.**
@@ -24,11 +38,12 @@ its built-in `protonmail` connector.
 
 ## Preflight (run once per session, before the first action)
 
-1. `permission-slip whoami` — confirm this agent is registered. If not, tell
-   the user to register (`permission-slip register ...`) and stop.
-2. `permission-slip connectors` — confirm `protonmail` is available. If it's
-   missing, the user hasn't connected a Proton Mail account yet; point them at
-   the connector setup docs and stop.
+1. `npx @permission-slip/cli@latest whoami` — confirm this agent is registered.
+   If not, tell the user to register
+   (`npx @permission-slip/cli@latest register ...`) and stop.
+2. `npx @permission-slip/cli@latest connectors` — confirm `protonmail` is
+   available. If it's missing, the user hasn't connected a Proton Mail account
+   yet; point them at the connector setup docs and stop.
 
 ## Intent -> action mapping
 
@@ -45,7 +60,7 @@ its built-in `protonmail` connector.
 ## How to run an action
 
 ```bash
-permission-slip request \
+npx @permission-slip/cli@latest request \
   --action protonmail.read_inbox \
   --params '{"limit": 50}'
 ```
@@ -59,19 +74,62 @@ The CLI prints JSON. Two outcomes:
 - **Pending approval (send / reply / archive):** the CLI returns a request id in
   a `pending` state. Tell the user plainly: *"That needs your approval — I've
   sent the request to Permission Slip; I'll know once you approve it."* Then
-  poll with `permission-slip request-status <id>` and report the outcome. Never
+  poll with `npx @permission-slip/cli@latest request-status <id>` and report the
+  outcome. Never
   claim a send/reply succeeded until the status is approved **and** executed.
 
 ## Presenting results
 
-- Summarize the inbox briefly (sender, subject, unread/read, time). Don't dump
-  raw JSON unless asked.
-- **Use emojis to make the list easier to scan** — e.g. 📧 per message,
-  🔵 unread / ⚪ read, 📎 attachment, ⭐ flagged/important. Keep it tasteful:
-  one or two icons per line, not a wall of emoji.
-- If the inbox read returns empty, say so — don't retry blindly.
-- On error, surface the connector's message verbatim (e.g. Bridge not running)
-  and suggest the fix rather than guessing.
+**The JSON from the CLI is for you, not the user. NEVER show it to them.**
+The CLI prints JSON (and the agent's own command invocations) as an
+implementation detail. The user should never see raw JSON, the `npx ...`
+commands you ran, request ids, `uid`s, `message_id_header`s, flags like
+`\\Seen`, or any other machine-facing field. Always translate the JSON into a
+short, human-readable summary.
+
+For an inbox/search read, present one line per message with:
+sender (name only), subject, read/unread, and a friendly relative time. Use a
+couple of scannable emojis — 📧 per message, 🔵 unread / ⚪ read, 📎 attachment,
+⭐ flagged/important — but keep it tasteful (one or two icons per line, not a
+wall of emoji).
+
+### Example
+
+Given CLI output like:
+
+```json
+{"result":{"emails":[
+  {"uid":436,"subject":"The hidden cost of building your own docs","from":["Daniel from Mintlify "],"date":"2026-06-16T10:00:31-04:00","flags":["\\Recent"]},
+  {"uid":322,"subject":"RE: RE: RE: RE: Rental property","from":["Erika Acevedo-Rodriguez "],"date":"2026-06-12T15:54:21Z","flags":["\\Answered","\\Seen"]},
+  {"uid":46,"subject":"Re: hosting this summer","from":["Chris Kelty "],"date":"2026-05-27T09:15:12-04:00","flags":["\\Seen"]}
+],"total":3}}
+```
+
+Present it as:
+
+> Here's your inbox — 3 messages:
+>
+> 📧 🔵 **Daniel from Mintlify** — The hidden cost of building your own docs · today 10:00 AM
+> 📧 ⚪ **Erika Acevedo-Rodriguez** — RE: Rental property · Jun 12
+> 📧 ⚪ **Chris Kelty** — Re: hosting this summer · May 27
+>
+> Want me to open any of these or reply to one?
+
+Notes on the mapping:
+- `\\Seen` → read (⚪); absence of `\\Seen` → unread (🔵).
+- Clean up noisy subjects (collapse `RE: RE: RE:` to a single `RE:`).
+- Turn the ISO timestamp into a friendly relative/local time.
+- Keep the `{folder, uid}` for each message in your own working memory so you
+  can act on follow-ups ("open it", "reply") — just don't surface them.
+
+### Other cases
+
+- If the inbox read returns empty, say so plainly — don't retry blindly.
+- On error, surface the connector's message in plain language (e.g. "Proton Mail
+  Bridge isn't running") and suggest the fix rather than dumping the raw error
+  JSON or guessing.
+- If a preflight check (`whoami`/`connectors`) fails, tell the user what's
+  wrong and the fix — don't paste the raw "Command not found" / JSON output.
 
 ## Constraints
 
