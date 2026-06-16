@@ -80,14 +80,56 @@ The CLI prints JSON. Two outcomes:
 
 ## Presenting results
 
-- Summarize the inbox briefly (sender, subject, unread/read, time). Don't dump
-  raw JSON unless asked.
-- **Use emojis to make the list easier to scan** — e.g. 📧 per message,
-  🔵 unread / ⚪ read, 📎 attachment, ⭐ flagged/important. Keep it tasteful:
-  one or two icons per line, not a wall of emoji.
-- If the inbox read returns empty, say so — don't retry blindly.
-- On error, surface the connector's message verbatim (e.g. Bridge not running)
-  and suggest the fix rather than guessing.
+**The JSON from the CLI is for you, not the user. NEVER show it to them.**
+The CLI prints JSON (and the agent's own command invocations) as an
+implementation detail. The user should never see raw JSON, the `npx ...`
+commands you ran, request ids, `uid`s, `message_id_header`s, flags like
+`\\Seen`, or any other machine-facing field. Always translate the JSON into a
+short, human-readable summary.
+
+For an inbox/search read, present one line per message with:
+sender (name only), subject, read/unread, and a friendly relative time. Use a
+couple of scannable emojis — 📧 per message, 🔵 unread / ⚪ read, 📎 attachment,
+⭐ flagged/important — but keep it tasteful (one or two icons per line, not a
+wall of emoji).
+
+### Example
+
+Given CLI output like:
+
+```json
+{"result":{"emails":[
+  {"uid":436,"subject":"The hidden cost of building your own docs","from":["Daniel from Mintlify "],"date":"2026-06-16T10:00:31-04:00","flags":["\\Recent"]},
+  {"uid":322,"subject":"RE: RE: RE: RE: Rental property","from":["Erika Acevedo-Rodriguez "],"date":"2026-06-12T15:54:21Z","flags":["\\Answered","\\Seen"]},
+  {"uid":46,"subject":"Re: hosting this summer","from":["Chris Kelty "],"date":"2026-05-27T09:15:12-04:00","flags":["\\Seen"]}
+],"total":3}}
+```
+
+Present it as:
+
+> Here's your inbox — 3 messages:
+>
+> 📧 🔵 **Daniel from Mintlify** — The hidden cost of building your own docs · today 10:00 AM
+> 📧 ⚪ **Erika Acevedo-Rodriguez** — RE: Rental property · Jun 12
+> 📧 ⚪ **Chris Kelty** — Re: hosting this summer · May 27
+>
+> Want me to open any of these or reply to one?
+
+Notes on the mapping:
+- `\\Seen` → read (⚪); absence of `\\Seen` → unread (🔵).
+- Clean up noisy subjects (collapse `RE: RE: RE:` to a single `RE:`).
+- Turn the ISO timestamp into a friendly relative/local time.
+- Keep the `{folder, uid}` for each message in your own working memory so you
+  can act on follow-ups ("open it", "reply") — just don't surface them.
+
+### Other cases
+
+- If the inbox read returns empty, say so plainly — don't retry blindly.
+- On error, surface the connector's message in plain language (e.g. "Proton Mail
+  Bridge isn't running") and suggest the fix rather than dumping the raw error
+  JSON or guessing.
+- If a preflight check (`whoami`/`connectors`) fails, tell the user what's
+  wrong and the fix — don't paste the raw "Command not found" / JSON output.
 
 ## Constraints
 
