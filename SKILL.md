@@ -66,6 +66,9 @@ The CLI prints JSON. Two outcomes:
 
 - Summarize the inbox briefly (sender, subject, unread/read, time). Don't dump
   raw JSON unless asked.
+- **Use emojis to make the list easier to scan** — e.g. 📧 per message,
+  🔵 unread / ⚪ read, 📎 attachment, ⭐ flagged/important. Keep it tasteful:
+  one or two icons per line, not a wall of emoji.
 - If the inbox read returns empty, say so — don't retry blindly.
 - On error, surface the connector's message verbatim (e.g. Bridge not running)
   and suggest the fix rather than guessing.
